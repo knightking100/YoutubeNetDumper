@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27906.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeNetDumper", "YoutubeNetDumper\YoutubeNetDumper.csproj", "{B6C6C847-7594-4037-8171-3650ACC71207}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeNetDumper.Sample", "YoutubeNetDumper.Sample\YoutubeNetDumper.Sample.csproj", "{B263EA47-BAA3-4C46-A081-EE70E1B8F3D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoutubeNetDumper.Benchmarking", "YoutubeNetDumper.Benchmarking\YoutubeNetDumper.Benchmarking.csproj", "{C460419A-EC8F-4922-9953-6A0B135ED2B2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6C6C847-7594-4037-8171-3650ACC71207}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6C6C847-7594-4037-8171-3650ACC71207}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6C6C847-7594-4037-8171-3650ACC71207}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6C6C847-7594-4037-8171-3650ACC71207}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B263EA47-BAA3-4C46-A081-EE70E1B8F3D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B263EA47-BAA3-4C46-A081-EE70E1B8F3D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B263EA47-BAA3-4C46-A081-EE70E1B8F3D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B263EA47-BAA3-4C46-A081-EE70E1B8F3D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C460419A-EC8F-4922-9953-6A0B135ED2B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C460419A-EC8F-4922-9953-6A0B135ED2B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C460419A-EC8F-4922-9953-6A0B135ED2B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C460419A-EC8F-4922-9953-6A0B135ED2B2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {108FB9C8-A992-4223-A5E8-A1D8B5BD28D5}
+	EndGlobalSection
+EndGlobal
