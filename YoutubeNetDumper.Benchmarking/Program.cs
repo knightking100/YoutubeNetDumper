@@ -4,7 +4,6 @@ using System;
 using System.Threading.Tasks;
 using VideoLibrary;
 using YoutubeExplode;
-using YoutubeExtractor;
 
 namespace YoutubeNetDumper.Benchmarking
 {
@@ -23,6 +22,7 @@ namespace YoutubeNetDumper.Benchmarking
         private readonly string VIDEO_ID = "kJQP7kiw5Fk";
         private readonly YoutubeClient ytExplode = new YoutubeClient();
         private readonly YoutubeDumper ytNetDumper = new YoutubeDumper();
+        private readonly YoutubeExperimentalDumper ytNetDumperNew = new YoutubeExperimentalDumper();
 
         [Benchmark]
         public async Task YoutubeExplode() => await ytExplode.GetVideoMediaStreamInfosAsync(VIDEO_ID);
@@ -38,6 +38,7 @@ namespace YoutubeNetDumper.Benchmarking
         }
 
         [Benchmark]
-        public void YoutubeExtractor() => DownloadUrlResolver.GetDownloadUrls($"https://www.youtube.com/watch?v={VIDEO_ID}", true);
+        public async Task YoutubeNetDumperNew() => await ytNetDumperNew.DumpAsync(VIDEO_ID);
     }
+    
 }

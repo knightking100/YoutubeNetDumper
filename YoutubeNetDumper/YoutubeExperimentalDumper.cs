@@ -1,103 +1,99 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Formatting;
 using System.Threading.Tasks;
+using System.Buffers.Text;
 using System.Web;
+using System.Text.JsonLab;
+using System.Text.RegularExpressions;
 
 namespace YoutubeNetDumper
 {
-    public class YoutubeDumper : IYoutubeDumper
+    public class YoutubeExperimentalConfig
     {
-        /// <summary>
-        /// The location to search for videos
-        /// </summary>
         public string Geolocation { get; set; } = "US";
-
-        /// <summary>
-        /// The language of result
-        /// </summary>
         public string Language { get; set; } = "en";
+        public bool MeasureTime { get; set; } = true;
+        public bool UseChromeUserAgent { get; set; } = false;
+        public string UserAgent { get; set; }
+        public HttpClient HttpClient { get; set; }
+    }
 
+    public class YoutubeExperimentalDumper : IYoutubeDumper
+    {
         private readonly HttpClient _client;
         private readonly StringFormatter sb;
 
         private string PlayerSource { get; set; }
         private IReadOnlyList<UnscramblingInstruction> Instructions { get; set; }
         private readonly Stopwatch sw_parsing;
-        private readonly Stopwatch _sw;
+        private readonly Stopwatch sw;
+        private readonly ArrayPool<byte> _pool;
+        private readonly YoutubeExperimentalConfig _config;
 
         /// <summary>
         /// Create a new instance of <see cref="YoutubeDumper"/>
         /// </summary>
         /// <param name="accurate_all">If set to true, the client will use Chrome User-Agent, which can determine whether video is 3D or 360 degree.
         /// However, this will also slow down the process.</param>
-        public YoutubeDumper(bool accurate_all = false)
+        public YoutubeExperimentalDumper(YoutubeExperimentalConfig config)
         {
-            _client = new HttpClient();
-            //_client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A");
+            _config = config;
+            _pool = ArrayPool<byte>.Shared;
+            _client = config.HttpClient ?? new HttpClient();
             //Chrome User-Agent
-            if (accurate_all)
+            if (config.UseChromeUserAgent)
                 _client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36");
+
+            if (!string.IsNullOrWhiteSpace(config.UserAgent))
+                _client.DefaultRequestHeaders.Add("User-Agent", config.UserAgent);
             sb = new StringFormatter();
-            sw_parsing = new Stopwatch();
-            _sw = new Stopwatch();
+            sw_parsing = config.MeasureTime ? new Stopwatch() : null;
+            sw = config.MeasureTime ? new Stopwatch() : null;
         }
 
+        public YoutubeExperimentalDumper() : this(new YoutubeExperimentalConfig()) { }
+        
         //TODO: Handle age-restricted and country-restricted videos
         public async Task<DumpResult> DumpAsync(string videoId)
         {
-            sw_parsing.Reset();
-            sw_parsing.Reset();
+            sw_parsing?.Reset();
+            sw_parsing?.Reset();
 
-            _sw.Start();
-            var content = await GetWatchPageAsync($"https://www.youtube.com/watch?v={videoId}" +
-                $"&gl={Geolocation}" +
-                $"&hl={Language}" + //Set the language
+            sw?.Start();
+            var buffer = _pool.Rent(60000);
+            var content = await GetJsonAsync($"https://www.youtube.com/watch?v={videoId}" +
+                $"&gl={_config.Geolocation}" +
+                $"&hl={_config.Language}" + //Set the language
                 $"&has_verified=1" +
-                $"&bpctr=9999999999"); //For videos that 'may be inappropriate or offensive for some users'
+                $"&bpctr=9999999999", buffer); //For videos that 'may be inappropriate or offensive for some users'
+            
+            sw_parsing?.Start();
 
-            sb.Clear();
-            sw_parsing.Start();
-
-            //Extract json
-            //var searchTerm = "ytplayer.config =";
-            var searchTerm = "g =";
-            var pos = content.LastIndexOf(searchTerm);
-
-            for (int i = pos + searchTerm.Length; i < content.Length; i++)
-            {
-                if (content[i] == ';' && content[i + 1] == 'y') break;
-                sb.Append(content[i]);
-            }
-
-            var json = sb.ToString().Trim();
-            sb.Clear();
-            var obj = JObject.Parse(json);
-
+            var config = ParseConfig(content);
+            _pool.Return(buffer);
             var video = new YoutubeVideo
             {
-                Title = (string)obj["args"]["title"],
-                Author = (string)obj["args"]["author"],
-                Views = int.TryParse((string)obj["args"]["view_count"], out var v) ? (int?)v : null,
+                Title = config.Title,
+                Author = config.Author,
+                //Views = int.TryParse((string)obj["args"]["view_count"], out var v) ? (int?)v : null,
             };
 
-            var player_url = "https://youtube.com" + (string)obj["assets"]["js"];
+            var player_url = "https://www.youtube.com/" + config.PlayerUrl;
 
-            var data = (obj["args"]["adaptive_fmts"].Value<string>() + "," +
-                obj["args"]["url_encoded_fmt_stream_map"].Value<string>()).Split(',');
+            var data = (config.RawAdaptiveStreams + "," +
+                config.RawMixedStream).Split(',');
             video.MediaStreams = await ParseMediaStreamsAsync(data, player_url);
 
-            sw_parsing.Stop();
-            _sw.Stop();
+            sw_parsing?.Stop();
+            sw?.Stop();
 
             return new DumpResult
             {
-                ElapsedTime = _sw.Elapsed,
+                ElapsedTime = sw.Elapsed,
                 ElapsedParsingTime = sw_parsing.Elapsed,
                 Video = video
             };
@@ -124,9 +120,9 @@ namespace YoutubeNetDumper
                 {
                     if (PlayerSource == null)
                     {
-                        sw_parsing.Stop();
+                        sw_parsing?.Stop();
                         PlayerSource = await _client.GetStringAsync(player_url);
-                        sw_parsing.Start();
+                        sw_parsing?.Start();
                     }
 
                     if (Instructions == null)
@@ -247,49 +243,52 @@ namespace YoutubeNetDumper
             return instructions;
         }
 
-        private static YoutubeConfig GenerateConfig(string json)
+        private YoutubeConfig ParseConfig(ReadOnlyMemory<byte> json)
         {
-            var reader = new JsonTextReader(new System.IO.StringReader(json));
+            var reader = new Utf8JsonReader(json.Span);
+            
             string playerUrl = null;
             string raw_adaptive_streams = null;
             string title = null;
             string author = null;
             string raw_mixed_streams = null;
             string thumbnail_url = null;
-
+            
             while (reader.Read())
             {
                 if (playerUrl != null && raw_adaptive_streams != null
                     && title != null && author != null && raw_adaptive_streams != null
                     && raw_mixed_streams != null && thumbnail_url != null)
                     break;
-                if (reader.TokenType == JsonToken.PropertyName)
+                if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    var propertyName = reader.Value as string;
-                    switch (propertyName)
+                    var name = Encodings.Utf8.ToString(reader.Value);
+                    reader.Read();
+                    var value = Regex.Unescape(Encodings.Utf8.ToString(reader.Value));
+                    switch (name)
                     {
                         case "title":
-                            title = reader.ReadAsString();
+                            title = value;
                             break;
 
                         case "author":
-                            author = reader.ReadAsString();
+                            author = value;
                             break;
 
                         case "js":
-                            playerUrl = reader.ReadAsString();
+                            playerUrl = value;
                             break;
 
                         case "adaptive_fmts":
-                            raw_adaptive_streams = reader.ReadAsString();
+                            raw_adaptive_streams = value;
                             break;
 
                         case "url_encoded_fmt_stream_map":
-                            raw_mixed_streams = reader.ReadAsString();
+                            raw_mixed_streams = value;
                             break;
 
                         case "thumbnail_url":
-                            thumbnail_url = reader.ReadAsString();
+                            thumbnail_url = value;
                             break;
                     }
                 }
@@ -306,9 +305,14 @@ namespace YoutubeNetDumper
             };
         }
 
-        private async Task<string> GetWatchPageAsync(string url)
+        private async Task<ReadOnlyMemory<byte>> GetJsonAsync(string url, byte[] buffer)
         {
-            var search_pattern = ";ytplayer.load";
+            var memory = new Memory<byte>(buffer);
+            int current_index = 0;
+            var end_pattern = "tplayer.load";
+            var start_pattern = "tplayer.config";
+            bool found = false;
+            bool startJson = false;
 
             using (var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
             {
@@ -320,25 +324,31 @@ namespace YoutubeNetDumper
                     if (value == ';')
                     {
                         if (stream.ReadByte() != 'y') continue;
-                        var chars = ArrayPool<char>.Shared.Rent(10);
+                        var chars = ArrayPool<char>.Shared.Rent(start_pattern.Length);
+                        var end = found ? end_pattern.Length + 1 : start_pattern.Length + 1;
 
-                        for (int i = 0; i < search_pattern.Length - 1; i++)
+                        for (int i = 0; i < end; i++)
                         {
                             chars[i] = (char)stream.ReadByte();
                         }
-                        if (chars.AsSpan(0, 12).SequenceEqual("tplayer.load"))
-                        {
-                            ArrayPool<char>.Shared.Return(chars);
-                            break;
-                        }
-                        else
-                            ArrayPool<char>.Shared.Return(chars);
+                        found = found || chars.AsSpan(0, start_pattern.Length).SequenceEqual(start_pattern);
+                        bool endOfJson = found && chars.AsSpan(0, end_pattern.Length).SequenceEqual(end_pattern);
+                        ArrayPool<char>.Shared.Return(chars);
+                        if (endOfJson) break;
                     }
-                    sb.Append((char)value);
+
+                    startJson = found && (startJson || value == '{');
+
+                    if (startJson)
+                    {
+                        memory.Span[current_index] = (byte)value;
+                        current_index++;
+                    }
                 }
             }
 
-            return sb.ToString();
+            return memory.Slice(0, current_index);
         }
     }
+    
 }

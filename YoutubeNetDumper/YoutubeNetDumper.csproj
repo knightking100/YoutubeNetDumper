@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="System.Text.Formatting" Version="0.1.0-preview2-180803-1" />
+    <PackageReference Include="System.Text.JsonLab" Version="0.1.0-preview2-180808-3" />
   </ItemGroup>
 
 </Project>

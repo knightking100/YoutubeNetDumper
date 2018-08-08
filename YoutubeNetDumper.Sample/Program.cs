@@ -13,7 +13,7 @@ namespace YoutubeNetDumper.Sample
             if (string.IsNullOrWhiteSpace(videoId))
                 videoId = "RBumgq5yVrA";
             videoId = YoutubeUtils.ParseVideoId(videoId);
-            var result = new YoutubeDumper().DumpAsync(videoId).GetAwaiter().GetResult();
+            var result = new YoutubeExperimentalDumper().DumpAsync(videoId).GetAwaiter().GetResult();
 
             Console.WriteLine($"\n{result.Video.MediaStreams.Count} streams were obtained");
             foreach (var stream in result.Video.MediaStreams)

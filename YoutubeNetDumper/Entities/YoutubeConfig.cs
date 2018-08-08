@@ -19,5 +19,7 @@
         public string ThumbnailUrl { get; set; }
         public string RawAdaptiveStreams { get; set; }
         public string RawMixedStream { get; set; }
+
+        public YoutubeVideo Video { get; set; }
     }
 }
