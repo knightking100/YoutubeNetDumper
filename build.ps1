@@ -1,13 +1,13 @@
 dotnet --version | Out-Host
 Write-Host "Restoring NuGet packages" 
-& dotnet restore | Out-Host
+& dotnet restore .\YoutubeNetDumper\YoutubeNetDumper.csproj | Out-Host
 if ($LastExitCode -ne 0)
 {
    Write-Host "Restored failed"
    Return $LastExitCode
 }
-Write-Host "Building solution..."
-& dotnet build -c Release | Out-Host
+Write-Host "Building project..."
+& dotnet build .\YoutubeNetDumper\YoutubeNetDumper.csproj -c Release | Out-Host
 if ($LastExitCode -ne 0)
 {
    Write-Host "Build failed"
