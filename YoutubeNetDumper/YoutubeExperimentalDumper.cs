@@ -22,7 +22,7 @@ namespace YoutubeNetDumper
         public HttpClient HttpClient { get; set; }
     }
 
-    public class YoutubeExperimentalDumper : IYoutubeDumper
+    public sealed class YoutubeExperimentalDumper : IYoutubeDumper
     {
         private readonly HttpClient _client;
         private readonly StringFormatter sb;
@@ -75,12 +75,7 @@ namespace YoutubeNetDumper
 
             var config = ParseConfig(content);
             _pool.Return(buffer);
-            var video = new YoutubeVideo
-            {
-                Title = config.Title,
-                Author = config.Author,
-                //Views = int.TryParse((string)obj["args"]["view_count"], out var v) ? (int?)v : null,
-            };
+            var video = config.Video;
 
             var player_url = "https://www.youtube.com/" + config.PlayerUrl;
 
@@ -246,20 +241,13 @@ namespace YoutubeNetDumper
         private YoutubeConfig ParseConfig(ReadOnlyMemory<byte> json)
         {
             var reader = new Utf8JsonReader(json.Span);
-            
             string playerUrl = null;
             string raw_adaptive_streams = null;
-            string title = null;
-            string author = null;
             string raw_mixed_streams = null;
-            string thumbnail_url = null;
+            var video = new YoutubeVideo();
             
             while (reader.Read())
             {
-                if (playerUrl != null && raw_adaptive_streams != null
-                    && title != null && author != null && raw_adaptive_streams != null
-                    && raw_mixed_streams != null && thumbnail_url != null)
-                    break;
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
                     var name = Encodings.Utf8.ToString(reader.Value);
@@ -267,29 +255,18 @@ namespace YoutubeNetDumper
                     var value = Regex.Unescape(Encodings.Utf8.ToString(reader.Value));
                     switch (name)
                     {
-                        case "title":
-                            title = value;
-                            break;
-
-                        case "author":
-                            author = value;
-                            break;
-
-                        case "js":
-                            playerUrl = value;
-                            break;
-
-                        case "adaptive_fmts":
-                            raw_adaptive_streams = value;
-                            break;
-
-                        case "url_encoded_fmt_stream_map":
-                            raw_mixed_streams = value;
-                            break;
-
-                        case "thumbnail_url":
-                            thumbnail_url = value;
-                            break;
+                        case "js": playerUrl = value; break;
+                        case "adaptive_fmts": raw_adaptive_streams = value; break;
+                        case "url_encoded_fmt_stream_map": raw_mixed_streams = value; break;
+                        //Video info
+                        case "title": video.Title = value; break;
+                        case "author": video.Author = value; break;
+                        case "thumbnail_url": video.ThumbnailUrl = value; break;
+                        case "live_content": video.IsLiveStream = true; break;
+                        case "length_seconds": video.Duration = TimeSpan.FromSeconds(int.Parse(value)); break;
+                        case "avg_rating": video.AverageRating = double.Parse(value); break;
+                        case "keywords": video.Keywords = value; break;
+                        case "view_count": video.Views = int.Parse(value); break;
                     }
                 }
             }
@@ -297,11 +274,9 @@ namespace YoutubeNetDumper
             return new YoutubeConfig
             {
                 PlayerUrl = playerUrl,
-                Author = author,
-                Title = title,
-                ThumbnailUrl = thumbnail_url,
                 RawAdaptiveStreams = raw_adaptive_streams,
-                RawMixedStream = raw_mixed_streams
+                RawMixedStream = raw_mixed_streams,
+                Video = video
             };
         }
 
