@@ -7,14 +7,14 @@ if ($LastExitCode -ne 0)
    Return $LastExitCode
 }
 Write-Host "Building project..."
-& dotnet build .\YoutubeNetDumper\YoutubeNetDumper.csproj -c Release | Out-Host
+& dotnet build .\YoutubeNetDumper\YoutubeNetDumper.csproj -VersionSuffix "$Env:APPVEYOR_BUILD_NUMBER -o" -c Release | Out-Host
 if ($LastExitCode -ne 0)
 {
    Write-Host "Build failed"
    Return $LastExitCode
 }
 Write-Host "Creating NuGet packages"
-& dotnet pack .\YoutubeNetDumper\YoutubeNetDumper.csproj -o ..\packages | Out-Host
+& dotnet pack .\YoutubeNetDumper\YoutubeNetDumper.csproj -VersionSuffix "$Env:APPVEYOR_BUILD_NUMBER -o" ..\packages | Out-Host
 if ($LastExitCode -ne 0)
 {
    Write-Host "Created NuGet packages failed"
