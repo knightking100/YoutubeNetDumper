@@ -8,7 +8,7 @@ namespace YoutubeNetDumper
     {
         public string Title { get; internal set; }
         public string Author { get; internal set; }
-        public int? Views { get; internal set; }
+        public long? Views { get; internal set; }
         public double AverageRating { get; internal set; }
         public string Keywords { get; internal set; }
         public bool IsLiveStream { get; internal set; }

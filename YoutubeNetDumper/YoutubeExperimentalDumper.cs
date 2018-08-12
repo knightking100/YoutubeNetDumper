@@ -272,10 +272,10 @@ namespace YoutubeNetDumper
                         case "author": video.Author = value; break;
                         case "thumbnail_url": video.ThumbnailUrl = value; break;
                         case "live_content": video.IsLiveStream = true; break;
-                        case "length_seconds": video.Duration = TimeSpan.FromSeconds(int.Parse(value)); break;
+                        case "length_seconds": video.Duration = TimeSpan.FromSeconds(double.Parse(value)); break;
                         case "avg_rating": video.AverageRating = double.Parse(value); break;
                         case "keywords": video.Keywords = value; break;
-                        case "view_count": video.Views = int.Parse(value); break;
+                        case "view_count": video.Views = long.Parse(value); break;
                     }
                 }
             }
