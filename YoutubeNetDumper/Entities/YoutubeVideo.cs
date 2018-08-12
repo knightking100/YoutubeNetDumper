@@ -19,8 +19,8 @@ namespace YoutubeNetDumper
 
         //These stuff doesn't work if you turn chrome User Agent off
         public bool Is360Degree => MediaStreams.Any(x => x.Type == MediaStreamType.Video && (x.Quality?.Contains("s") ?? false));
+        public bool Is3D => MediaStreams.Any(x => x.Attributes.Is3D);
 
-        public bool Is3D { get; }
         public bool Is4K => MediaStreams.Any(x => x.Quality?.StartsWith("2160") ?? false);
         public bool Is8K => MediaStreams.Any(x => x.Quality?.StartsWith("4320") ?? false);
     }

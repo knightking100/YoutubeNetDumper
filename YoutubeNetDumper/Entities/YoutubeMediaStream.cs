@@ -13,6 +13,7 @@ namespace YoutubeNetDumper
         public MediaStreamType Type { get; internal set; }
         public string Codecs { get; internal set; }
         public string Size { get; internal set; }
+        public MediaStreamAttributes Attributes { get; internal set; }
     }
 
     public enum MediaStreamType

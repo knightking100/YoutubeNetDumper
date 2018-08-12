@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Buffers;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Formatting;
-using System.Threading.Tasks;
-using System.Buffers.Text;
-using System.Web;
 using System.Text.JsonLab;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Web;
 
 namespace YoutubeNetDumper
 {
@@ -37,8 +37,6 @@ namespace YoutubeNetDumper
         /// <summary>
         /// Create a new instance of <see cref="YoutubeDumper"/>
         /// </summary>
-        /// <param name="accurate_all">If set to true, the client will use Chrome User-Agent, which can determine whether video is 3D or 360 degree.
-        /// However, this will also slow down the process.</param>
         public YoutubeExperimentalDumper(YoutubeExperimentalConfig config)
         {
             _config = config;
@@ -55,8 +53,10 @@ namespace YoutubeNetDumper
             sw = config.MeasureTime ? new Stopwatch() : null;
         }
 
-        public YoutubeExperimentalDumper() : this(new YoutubeExperimentalConfig()) { }
-        
+        public YoutubeExperimentalDumper() : this(new YoutubeExperimentalConfig())
+        {
+        }
+
         //TODO: Handle age-restricted and country-restricted videos
         public async Task<DumpResult> DumpAsync(string videoId)
         {
@@ -70,7 +70,7 @@ namespace YoutubeNetDumper
                 $"&hl={_config.Language}" + //Set the language
                 $"&has_verified=1" +
                 $"&bpctr=9999999999", buffer); //For videos that 'may be inappropriate or offensive for some users'
-            
+
             sw_parsing?.Start();
 
             var config = ParseConfig(content);
@@ -137,20 +137,29 @@ namespace YoutubeNetDumper
 
                 quality = quality ?? dict.GetValueOrDefault("quality_label");
                 var size = dict.GetValueOrDefault("size");
+                var itag = int.Parse(dict.GetValueOrDefault("itag"));
+                var attributes = ItagMap.Get(itag);
+
+                if (attributes.FPS == null)
+                    attributes.FPS = dict.GetNullableIntValue("fps");
 
                 media_streams[i] = new YoutubeMediaStream
                 {
                     Url = url,
                     Bitrate = dict.GetNullableIntValue("bitrate"),
-                    Format = p[1],
-                    Framerate = dict.GetNullableIntValue("fps"),
-                    Itag = int.Parse(dict.GetValueOrDefault("itag")),
+                    Itag = itag,
                     Quality = quality,
                     Type = type,
-                    Codecs = p[p.Length - 1].Trim('"')
+                    Attributes = attributes
                 };
             }
             return media_streams;
+        }
+
+        private static (int Width, int Height) GetSize(string size)
+        {
+            var p = size.Split('x');
+            return (int.Parse(p[0]), int.Parse(p[1]));
         }
 
         private static Dictionary<string, string> SplitQuery(string query)
@@ -245,7 +254,7 @@ namespace YoutubeNetDumper
             string raw_adaptive_streams = null;
             string raw_mixed_streams = null;
             var video = new YoutubeVideo();
-            
+
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
@@ -290,8 +299,8 @@ namespace YoutubeNetDumper
             bool startJson = false;
 
             using (var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+            using (var stream = await response.Content.ReadAsStreamAsync())
             {
-                var stream = await response.Content.ReadAsStreamAsync();
                 while (stream.CanRead)
                 {
                     var value = stream.ReadByte();
@@ -325,5 +334,4 @@ namespace YoutubeNetDumper
             return memory.Slice(0, current_index);
         }
     }
-    
 }

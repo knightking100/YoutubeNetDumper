@@ -16,6 +16,7 @@ namespace YoutubeNetDumper.Sample
             var result = new YoutubeExperimentalDumper().DumpAsync(videoId).GetAwaiter().GetResult();
 
             Console.WriteLine($"\n{result.Video.MediaStreams.Count} streams were obtained");
+
             foreach (var stream in result.Video.MediaStreams)
             {
                 Console.WriteLine($"\nUrl: {stream.Url}");
@@ -28,8 +29,11 @@ namespace YoutubeNetDumper.Sample
                     Console.WriteLine($"Quality: {stream.Quality}");
                 if (stream.Framerate != null)
                     Console.WriteLine($"FPS: {stream.Framerate}");
-                Console.WriteLine($"Format: {stream.Format}");
-                Console.WriteLine($"Codecs: {stream.Codecs}");
+                Console.WriteLine($"Format: {stream.Attributes.Format}");
+                if (stream.Attributes.AudioCodec != null)
+                    Console.WriteLine($"Audio Codecs: {stream.Attributes.AudioCodec}");
+                if (stream.Attributes.VideoCodec != null)
+                    Console.WriteLine($"Video Codecs: {stream.Attributes.VideoCodec}");
             }
 
             Console.WriteLine($"{result.Video.Title} by {result.Video.Author}");

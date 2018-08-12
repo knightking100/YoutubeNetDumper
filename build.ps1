@@ -20,4 +20,7 @@ if ($LastExitCode -ne 0)
    Write-Host "Created NuGet packages failed"
    Exit $LastExitCode
 }
-Exit 0
+else
+{
+   Exit 0
+}
