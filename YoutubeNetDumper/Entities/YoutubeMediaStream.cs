@@ -8,11 +8,7 @@ namespace YoutubeNetDumper
         public string Url { get; internal set; }
         public string Quality { get; internal set; }//TODO: make this an enum
         public int? Bitrate { get; internal set; }
-        public int? Framerate { get; internal set; }
-        public string Format { get; internal set; }//TODO: make this an enum
         public MediaStreamType Type { get; internal set; }
-        public string Codecs { get; internal set; }
-        public string Size { get; internal set; }
         public MediaStreamAttributes Attributes { get; internal set; }
     }
 

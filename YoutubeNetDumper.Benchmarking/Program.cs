@@ -21,15 +21,11 @@ namespace YoutubeNetDumper.Benchmarking
     {
         private readonly string VIDEO_ID = "kJQP7kiw5Fk";
         private readonly YoutubeClient ytExplode = new YoutubeClient();
-        private readonly YoutubeDumper ytNetDumper = new YoutubeDumper();
         private readonly YoutubeExperimentalDumper ytNetDumperNew = new YoutubeExperimentalDumper();
 
         [Benchmark]
         public async Task YoutubeExplode() => await ytExplode.GetVideoMediaStreamInfosAsync(VIDEO_ID);
-
-        [Benchmark]
-        public async Task YoutubeNetDumper() => await ytNetDumper.DumpAsync(VIDEO_ID);
-
+        
         [Benchmark]
         public async Task libvideo()
         {
@@ -40,5 +36,4 @@ namespace YoutubeNetDumper.Benchmarking
         [Benchmark]
         public async Task YoutubeNetDumperNew() => await ytNetDumperNew.DumpAsync(VIDEO_ID);
     }
-    
 }

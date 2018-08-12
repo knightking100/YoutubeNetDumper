@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace YoutubeNetDumper.Sample
@@ -23,12 +24,10 @@ namespace YoutubeNetDumper.Sample
                 Console.WriteLine($"Type: {stream.Type}");
                 if (stream.Bitrate != null)
                     Console.WriteLine($"Bitrate: {stream.Bitrate}");
-                if (stream.Size != null)
-                    Console.WriteLine($"Size: {stream.Size}");
                 if (stream.Quality != null)
                     Console.WriteLine($"Quality: {stream.Quality}");
-                if (stream.Framerate != null)
-                    Console.WriteLine($"FPS: {stream.Framerate}");
+                if (stream.Attributes.FPS != null)
+                    Console.WriteLine($"FPS: {stream.Attributes.FPS}");
                 Console.WriteLine($"Format: {stream.Attributes.Format}");
                 if (stream.Attributes.AudioCodec != null)
                     Console.WriteLine($"Audio Codecs: {stream.Attributes.AudioCodec}");
@@ -55,22 +54,20 @@ namespace YoutubeNetDumper.Sample
             {
                 Console.WriteLine($"Gen {index} collections: {GC.CollectionCount(index)}");
             }
-            Console.WriteLine("Would you like to play the video in ffplay??");
-            string option = Console.ReadLine();
-            switch (option.ToLower())
+
+            if (File.Exists("ffplay.exe"))
             {
-                case "y":
-                case "yes":
-                    //var proc = new ProcessStartInfo
-                    //{
-                    //    FileName = "ffplay.exe",
-                    //    Arguments = $"\"{mixed_streams[0].Url}\" -window_title \"{result.Video.Title}\" -autoexit",
-                    //    CreateNoWindow = false,
-                    //    RedirectStandardOutput = false,
-                    //};
-                    Process.Start(new ProcessStartInfo("ffplay.exe", $"\"{result.Video.MediaStreams.FirstOrDefault(x => x.Type == MediaStreamType.Mixed).Url}\" -window_title \"{result.Video.Title}\" -autoexit"));
-                    break;
+                Console.WriteLine("Would you like to play the video in ffplay??");
+                string option = Console.ReadLine();
+                switch (option.ToLower())
+                {
+                    case "y":
+                    case "yes":
+                        Process.Start(new ProcessStartInfo("ffplay.exe", $"\"{result.Video.MediaStreams.FirstOrDefault(x => x.Type == MediaStreamType.Mixed).Url}\" -window_title \"{result.Video.Title}\" -autoexit"));
+                        break;
+                }
             }
+            
             Console.ReadLine();
         }
     }

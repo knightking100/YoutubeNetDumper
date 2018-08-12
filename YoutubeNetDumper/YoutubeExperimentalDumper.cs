@@ -80,7 +80,7 @@ namespace YoutubeNetDumper
             var player_url = "https://www.youtube.com/" + config.PlayerUrl;
 
             var data = (config.RawAdaptiveStreams + "," +
-                config.RawMixedStream).Split(',');
+                config.RawMixedStreams).Split(',');
             video.MediaStreams = await ParseMediaStreamsAsync(data, player_url);
 
             sw_parsing?.Stop();
@@ -284,7 +284,7 @@ namespace YoutubeNetDumper
             {
                 PlayerUrl = playerUrl,
                 RawAdaptiveStreams = raw_adaptive_streams,
-                RawMixedStream = raw_mixed_streams,
+                RawMixedStreams = raw_mixed_streams,
                 Video = video
             };
         }

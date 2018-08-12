@@ -9,8 +9,7 @@ namespace YoutubeNetDumper
         Vorbis,
         Opus,
         Dtse,
-        Ec3,
-		None
+        Ec3
     }
 
     public enum VideoCodec
@@ -19,8 +18,7 @@ namespace YoutubeNetDumper
         H264,
         MP4V,
         VP8,
-        VP9,
-		None
+        VP9
     }
 
     public struct MediaStreamAttributes
@@ -31,7 +29,7 @@ namespace YoutubeNetDumper
         public AudioCodec? AudioCodec { get; }
         public VideoCodec? VideoCodec { get; }
         public bool Is3D { get; }
-		public int? FPS { get; internal set; }
+        public int? FPS { get; internal set; }
 
         internal MediaStreamAttributes(string format, int? width, int? height, AudioCodec? aCodec,
             VideoCodec? vCodec, int? fps = null, bool is3D = false)
@@ -41,13 +39,13 @@ namespace YoutubeNetDumper
             Height = height;
             AudioCodec = aCodec;
             VideoCodec = vCodec;
-			FPS = fps;
+            FPS = fps;
             Is3D = is3D;
         }
 
         public string GetSize() => $"{Width}x{Height}";
-        
     }
+
     internal static class ItagMap
     {
         //Code from https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/youtube.py#L380-L476
@@ -71,7 +69,6 @@ namespace YoutubeNetDumper
             [46] = new MediaStreamAttributes("webm", 1920, 1080, AudioCodec.Vorbis, VideoCodec.VP8),
             [59] = new MediaStreamAttributes("mp4", 854, 480, AudioCodec.Aac, VideoCodec.H264),
             [78] = new MediaStreamAttributes("mp4", 854, 480, AudioCodec.Aac, VideoCodec.H264),
-
 
             // 3D videos
             [82] = new MediaStreamAttributes("mp4", null, 360, AudioCodec.Aac, VideoCodec.H264, is3D: true),
