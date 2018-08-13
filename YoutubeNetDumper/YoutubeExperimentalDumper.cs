@@ -79,9 +79,9 @@ namespace YoutubeNetDumper
 
             var player_url = "https://www.youtube.com/" + config.PlayerUrl;
 
-            var data = (config.RawAdaptiveStreams + "," +
-                config.RawMixedStreams).Split(',');
-            video.MediaStreams = await ParseMediaStreamsAsync(data, player_url);
+            var data = string.IsNullOrEmpty(config.RawAdaptiveStreams)? config.RawMixedStreams: config.RawAdaptiveStreams + "," +
+                config.RawMixedStreams;
+            video.MediaStreams = await ParseMediaStreamsAsync(data.Split(','), player_url);
 
             sw_parsing?.Stop();
             sw?.Stop();
@@ -139,7 +139,7 @@ namespace YoutubeNetDumper
                 var size = dict.GetValueOrDefault("size");
                 var itag = int.Parse(dict.GetValueOrDefault("itag"));
                 var attributes = ItagMap.Get(itag);
-
+                
                 if (attributes.FPS == null)
                     attributes.FPS = dict.GetNullableIntValue("fps");
 

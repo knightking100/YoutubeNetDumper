@@ -132,6 +132,10 @@ namespace YoutubeNetDumper
             [272] = new MediaStreamAttributes("webm", null, 2160, null, VideoCodec.VP9),
             [302] = new MediaStreamAttributes("webm", null, 720, null, VideoCodec.VP9, fps: 60),
             [303] = new MediaStreamAttributes("webm", null, 1080, null, VideoCodec.VP9, fps: 60),
+            //304 and 305 and unknown itags. I found them from https://www.youtube.com/watch?v=8DqSh_T20WY
+            // The information here might not be correct
+            [304] = new MediaStreamAttributes("mp4", 2560, 1440, null, null),
+            [305] = new MediaStreamAttributes("mp4", 3840, 2160, null, null),
             [308] = new MediaStreamAttributes("webm", null, 1440, null, VideoCodec.VP9, fps: 60),
             [313] = new MediaStreamAttributes("webm", null, 2160, null, VideoCodec.VP9),
             [315] = new MediaStreamAttributes("webm", null, 2160, null, VideoCodec.VP9, fps: 60),
