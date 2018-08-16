@@ -6,6 +6,7 @@ namespace YoutubeNetDumper
 {
     public class YoutubeVideo
     {
+        public string Id { get; internal set; }
         public string Title { get; internal set; }
         public string Author { get; internal set; }
         public long? Views { get; internal set; }
@@ -24,5 +25,7 @@ namespace YoutubeNetDumper
 
         public bool Is4K => MediaStreams.Any(x => x.Quality?.StartsWith("2160") ?? false);
         public bool Is8K => MediaStreams.Any(x => x.Quality?.StartsWith("4320") ?? false);
+
+        internal YoutubeVideo() { }
     }
 }

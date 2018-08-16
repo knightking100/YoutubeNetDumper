@@ -2,20 +2,39 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace YoutubeNetDumper.Sample
 {
     internal class Program
     {
+        private static readonly HttpClient _client = new HttpClient();
+
         private static void Main(string[] args)
         {
-            Console.WriteLine("Enter youtube video url:");
+            ExecuteAsync().GetAwaiter().GetResult();
+        }
+
+        static async Task ExecuteAsync()
+        {
+            var dumper = new YoutubeExperimentalDumper(new YoutubeExperimentalConfig
+            {
+                MeasureTime = true
+                HttpClient = _client
+            });
+
+            Console.WriteLine("Enter a YouTube video url:");
             string videoId = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(videoId))
-                videoId = "RBumgq5yVrA";
+            {
+                Console.WriteLine($"No videoId was provided. Picking a video from dbase.tube...");
+                videoId = await RANDOM.VIDEOID();
+            }
             videoId = YoutubeUtils.ParseVideoId(videoId);
-            var result = new YoutubeExperimentalDumper().DumpAsync(videoId).GetAwaiter().GetResult();
-
+            var result = await dumper.DumpAsync(videoId);
+            
             Console.WriteLine($"\n{result.Video.MediaStreams.Count} streams were obtained");
 
             foreach (var stream in result.Video.MediaStreams)
@@ -35,7 +54,7 @@ namespace YoutubeNetDumper.Sample
                     Console.WriteLine($"Video Codecs: {stream.Attributes.VideoCodec}");
             }
 
-            Console.WriteLine($"{result.Video.Title} by {result.Video.Author}");
+            Console.WriteLine($"{result.Video.Title} by {result.Video.Author} ({result.Video.Id}) with {result.Video.Views:N0} views");
 
             if (result.Video.Is360Degree)
                 Console.WriteLine($"This is a 360° video");
@@ -45,8 +64,8 @@ namespace YoutubeNetDumper.Sample
                 Console.WriteLine($"This is a 4K video");
             if (result.Video.Is3D)
                 Console.WriteLine($"This is a 3D video");
-            Console.WriteLine($"Total time: {result.ElapsedTime.TotalMilliseconds}ms");
-            Console.WriteLine($"Parsing time: {result.ElapsedParsingTime.TotalMilliseconds}ms");
+            Console.WriteLine($"Total time: {result.ElapsedTime?.TotalMilliseconds}ms");
+            Console.WriteLine($"Parsing time: {result.ElapsedParsingTime?.TotalMilliseconds}ms");
 
             Console.WriteLine($"Peak Working Set: {Process.GetCurrentProcess().PeakWorkingSet64}");
 
@@ -67,8 +86,22 @@ namespace YoutubeNetDumper.Sample
                         break;
                 }
             }
-            
+
             Console.ReadLine();
+        }
+
+        private static class RANDOM
+        {
+            private static readonly Regex regex = new Regex(@"\/v\/(.{11})", RegexOptions.Multiline);
+            
+            public static async Task<string> VIDEOID()
+            {
+                string url = DateTimeOffset.Now.Ticks % 2 == 0 ? "https://dbase.tube/1b-views-club"
+                    : "https://dbase.tube/1b-views-club?show=candidates";
+                var content = await _client.GetStringAsync(url);
+                var ids = regex.Matches(content).Select(x => x.Groups[1].Value).Distinct();
+                return ids.OrderBy(x => Guid.NewGuid()).FirstOrDefault();
+            }
         }
     }
 }

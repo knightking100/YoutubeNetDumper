@@ -12,16 +12,6 @@ using System.Web;
 
 namespace YoutubeNetDumper
 {
-    public class YoutubeExperimentalConfig
-    {
-        public string Geolocation { get; set; } = "US";
-        public string Language { get; set; } = "en";
-        public bool MeasureTime { get; set; } = true;
-        public bool UseChromeUserAgent { get; set; } = false;
-        public string UserAgent { get; set; }
-        public HttpClient HttpClient { get; set; }
-    }
-
     public sealed class YoutubeExperimentalDumper : IYoutubeDumper
     {
         private readonly HttpClient _client;
@@ -60,7 +50,7 @@ namespace YoutubeNetDumper
         //TODO: Handle age-restricted and country-restricted videos
         public async Task<DumpResult> DumpAsync(string videoId)
         {
-            sw_parsing?.Reset();
+            sw?.Reset();
             sw_parsing?.Reset();
 
             sw?.Start();
@@ -70,17 +60,19 @@ namespace YoutubeNetDumper
                 $"&hl={_config.Language}" + //Set the language
                 $"&has_verified=1" +
                 $"&bpctr=9999999999", buffer); //For videos that 'may be inappropriate or offensive for some users'
-
+            if (content.IsEmpty)
+                return new DumpResult() { Successful = false };
             sw_parsing?.Start();
 
             var config = ParseConfig(content);
             _pool.Return(buffer);
             var video = config.Video;
 
-            var player_url = "https://www.youtube.com/" + config.PlayerUrl;
+            var player_url = "https://www.youtube.com" + config.PlayerUrl;
 
             var data = string.IsNullOrEmpty(config.RawAdaptiveStreams)? config.RawMixedStreams: config.RawAdaptiveStreams + "," +
                 config.RawMixedStreams;
+            
             video.MediaStreams = await ParseMediaStreamsAsync(data.Split(','), player_url);
 
             sw_parsing?.Stop();
@@ -88,8 +80,8 @@ namespace YoutubeNetDumper
 
             return new DumpResult
             {
-                ElapsedTime = sw.Elapsed,
-                ElapsedParsingTime = sw_parsing.Elapsed,
+                ElapsedTime = sw?.Elapsed,
+                ElapsedParsingTime = sw_parsing?.Elapsed,
                 Video = video
             };
         }
@@ -268,6 +260,7 @@ namespace YoutubeNetDumper
                         case "adaptive_fmts": raw_adaptive_streams = value; break;
                         case "url_encoded_fmt_stream_map": raw_mixed_streams = value; break;
                         //Video info
+                        case "video_id": video.Id = value; break;
                         case "title": video.Title = value; break;
                         case "author": video.Author = value; break;
                         case "thumbnail_url": video.ThumbnailUrl = value; break;

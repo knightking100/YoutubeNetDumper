@@ -152,7 +152,7 @@ namespace YoutubeNetDumper
 
         public static MediaStreamAttributes Get(int itag)
         {
-            if (!_knownItags.TryGetValue(itag, out var attributes)) return new MediaStreamAttributes();
+            if (!_knownItags.TryGetValue(itag, out var attributes)) return new MediaStreamAttributes("Unknown", null, null, null, null, null);
             return attributes;
         }
     }

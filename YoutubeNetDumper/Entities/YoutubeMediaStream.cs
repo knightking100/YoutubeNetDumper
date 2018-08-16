@@ -10,6 +10,8 @@ namespace YoutubeNetDumper
         public int? Bitrate { get; internal set; }
         public MediaStreamType Type { get; internal set; }
         public MediaStreamAttributes Attributes { get; internal set; }
+
+        internal YoutubeMediaStream() { }
     }
 
     public enum MediaStreamType

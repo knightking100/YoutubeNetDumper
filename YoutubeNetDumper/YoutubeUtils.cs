@@ -22,7 +22,7 @@ namespace YoutubeNetDumper
                 default:
                     if (url.Length == 11)
                         return url;
-                    throw new FormatException("URL is not a YouTube video url");
+                    throw new FormatException("URL is neither a YouTube video url or id");
             }
         }
     }
