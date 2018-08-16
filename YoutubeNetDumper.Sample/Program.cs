@@ -21,7 +21,7 @@ namespace YoutubeNetDumper.Sample
         {
             var dumper = new YoutubeExperimentalDumper(new YoutubeExperimentalConfig
             {
-                MeasureTime = true
+                MeasureTime = true,
                 HttpClient = _client
             });
 
