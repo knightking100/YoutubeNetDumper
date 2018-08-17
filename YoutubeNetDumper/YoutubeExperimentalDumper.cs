@@ -3,7 +3,9 @@ using System.Buffers;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Text.Formatting;
 using System.Text.JsonLab;
 using System.Text.RegularExpressions;
@@ -46,7 +48,7 @@ namespace YoutubeNetDumper
         public YoutubeExperimentalDumper() : this(new YoutubeExperimentalConfig())
         {
         }
-
+        
         //TODO: Handle age-restricted and country-restricted videos
         public async Task<DumpResult> DumpAsync(string videoId)
         {
@@ -60,6 +62,7 @@ namespace YoutubeNetDumper
                 $"&hl={_config.Language}" + //Set the language
                 $"&has_verified=1" +
                 $"&bpctr=9999999999", buffer); //For videos that 'may be inappropriate or offensive for some users'
+            
             if (content.IsEmpty)
                 return new DumpResult() { Successful = false };
             sw_parsing?.Start();
@@ -70,10 +73,18 @@ namespace YoutubeNetDumper
 
             var player_url = "https://www.youtube.com" + config.PlayerUrl;
 
-            var data = string.IsNullOrEmpty(config.RawAdaptiveStreams)? config.RawMixedStreams: config.RawAdaptiveStreams + "," +
-                config.RawMixedStreams;
-            
-            video.MediaStreams = await ParseMediaStreamsAsync(data.Split(','), player_url);
+            bool addComma = false;
+            if (!string.IsNullOrEmpty(config.RawAdaptiveStreams))
+            {
+                sb.Append(config.RawAdaptiveStreams);
+                addComma = true;
+            }
+            if (!string.IsNullOrEmpty(config.RawMixedStreams))
+            {
+                if (addComma) sb.Append(',');
+                sb.Append(config.RawMixedStreams);
+            }
+            video.MediaStreams = await ParseMediaStreamsAsync(sb.ToString().Split(','), player_url);
 
             sw_parsing?.Stop();
             sw?.Stop();
@@ -122,7 +133,7 @@ namespace YoutubeNetDumper
                     url += $"&signature={sig}";
                 }
 
-                var p = dict.GetValueOrDefault("type").Split(';', '/', '=');
+                var p = dict.GetValueOrDefault("type")?.Split(';', '/', '=');
                 var isMixed = dict.TryGetValue("quality", out var quality);
                 var type = p[0] == "audio" ? MediaStreamType.Audio :
                      isMixed ? MediaStreamType.Mixed : MediaStreamType.Video;
@@ -238,8 +249,10 @@ namespace YoutubeNetDumper
             }
             return instructions;
         }
-
-        private YoutubeConfig ParseConfig(ReadOnlyMemory<byte> json)
+        static string[] _props = { "js" , "adaptive_fmts" , "url_encoded_fmt_stream_map" ,
+        "video_id", "title", "author", "thumbnail_url", "live_content", "length_seconds", "avg_rating",
+        "keywords", "view_count"};
+        private static YoutubeConfig ParseConfig(ReadOnlyMemory<byte> json)
         {
             var reader = new Utf8JsonReader(json.Span);
             string playerUrl = null;
@@ -253,23 +266,27 @@ namespace YoutubeNetDumper
                 {
                     var name = Encodings.Utf8.ToString(reader.Value);
                     reader.Read();
-                    var value = Regex.Unescape(Encodings.Utf8.ToString(reader.Value));
-                    switch (name)
+                    if (_props.Contains(name))
                     {
-                        case "js": playerUrl = value; break;
-                        case "adaptive_fmts": raw_adaptive_streams = value; break;
-                        case "url_encoded_fmt_stream_map": raw_mixed_streams = value; break;
-                        //Video info
-                        case "video_id": video.Id = value; break;
-                        case "title": video.Title = value; break;
-                        case "author": video.Author = value; break;
-                        case "thumbnail_url": video.ThumbnailUrl = value; break;
-                        case "live_content": video.IsLiveStream = true; break;
-                        case "length_seconds": video.Duration = TimeSpan.FromSeconds(double.Parse(value)); break;
-                        case "avg_rating": video.AverageRating = double.Parse(value); break;
-                        case "keywords": video.Keywords = value; break;
-                        case "view_count": video.Views = long.Parse(value); break;
+                        var value = Regex.Unescape(Encodings.Utf8.ToString(reader.Value));
+                        switch (name)
+                        {
+                            case "js": playerUrl = value; break;
+                            case "adaptive_fmts": raw_adaptive_streams = value; break;
+                            case "url_encoded_fmt_stream_map": raw_mixed_streams = value; break;
+                            //Video info
+                            case "video_id": video.Id = value; break;
+                            case "title": video.Title = value; break;
+                            case "author": video.Author = value; break;
+                            case "thumbnail_url": video.ThumbnailUrl = value; break;
+                            case "live_content": video.IsLiveStream = true; break;
+                            case "length_seconds": video.Duration = TimeSpan.FromSeconds(double.Parse(value)); break;
+                            case "avg_rating": video.AverageRating = double.Parse(value); break;
+                            case "keywords": video.Keywords = value; break;
+                            case "view_count": video.Views = long.Parse(value); break;
+                        }
                     }
+                    
                 }
             }
 
@@ -282,35 +299,36 @@ namespace YoutubeNetDumper
             };
         }
 
+        static readonly byte[] end_pattern = Encoding.UTF8.GetBytes("tplayer.load");
+        static readonly byte[] start_pattern = Encoding.UTF8.GetBytes("tplayer.config");
+
         private async Task<ReadOnlyMemory<byte>> GetJsonAsync(string url, byte[] buffer)
         {
             var memory = new Memory<byte>(buffer);
             int current_index = 0;
-            var end_pattern = "tplayer.load";
-            var start_pattern = "tplayer.config";
+
             bool found = false;
             bool startJson = false;
 
             using (var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
             using (var stream = await response.Content.ReadAsStreamAsync())
             {
+                var chars = _pool.Rent(start_pattern.Length + 1);
+                var buff = new byte[1];
                 while (stream.CanRead)
                 {
-                    var value = stream.ReadByte();
-                    if (value == -1) break;
+                    int count = await stream.ReadAsync(new Memory<byte>(buff));
+                    if (count == 0) break;
+                    var value = buff[0];
+
                     if (value == ';')
                     {
-                        if (stream.ReadByte() != 'y') continue;
-                        var chars = ArrayPool<char>.Shared.Rent(start_pattern.Length);
-                        var end = found ? end_pattern.Length + 1 : start_pattern.Length + 1;
+                        await stream.ReadAsync(new Memory<byte>(buff));
+                        if (buff[0] != 'y') continue;
 
-                        for (int i = 0; i < end; i++)
-                        {
-                            chars[i] = (char)stream.ReadByte();
-                        }
+                        await stream.ReadAsync(new Memory<byte>(chars));
                         found = found || chars.AsSpan(0, start_pattern.Length).SequenceEqual(start_pattern);
                         bool endOfJson = found && chars.AsSpan(0, end_pattern.Length).SequenceEqual(end_pattern);
-                        ArrayPool<char>.Shared.Return(chars);
                         if (endOfJson) break;
                     }
 
@@ -318,13 +336,15 @@ namespace YoutubeNetDumper
 
                     if (startJson)
                     {
-                        memory.Span[current_index] = (byte)value;
+                        memory.Span[current_index] = value;
                         current_index++;
                     }
                 }
+                _pool.Return(chars);
             }
 
             return memory.Slice(0, current_index);
         }
+        
     }
 }
