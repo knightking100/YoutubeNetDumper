@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Formatting;
 using System.Text.JsonLab;
@@ -71,7 +72,7 @@ namespace YoutubeNetDumper
             _pool.Return(buffer);
             var video = config.Video;
 
-            var player_url = "https://www.youtube.com" + config.PlayerUrl;
+            var player_url = "https://s.ytimg.com" + config.PlayerUrl;
 
             bool addComma = false;
             if (!string.IsNullOrEmpty(config.RawAdaptiveStreams))
@@ -119,7 +120,7 @@ namespace YoutubeNetDumper
                     if (PlayerSource == null)
                     {
                         sw_parsing?.Stop();
-                        PlayerSource = await _client.GetStringAsync(player_url);
+                        PlayerSource = await GetStringWithCompressionAsync(player_url);
                         sw_parsing?.Start();
                     }
 
@@ -140,7 +141,7 @@ namespace YoutubeNetDumper
 
                 quality = quality ?? dict.GetValueOrDefault("quality_label");
                 var size = dict.GetValueOrDefault("size");
-                var itag = int.Parse(dict.GetValueOrDefault("itag"));
+                var itag = dict.GetNullableIntValue("itag") ?? 0;
                 var attributes = ItagMap.Get(itag);
                 
                 if (attributes.FPS == null)
@@ -345,6 +346,26 @@ namespace YoutubeNetDumper
 
             return memory.Slice(0, current_index);
         }
-        
+
+        private async Task<string> GetStringWithCompressionAsync(string url)
+        {
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri(url),
+            };
+            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+            using (var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+            using (var stream = await response.Content.ReadAsStreamAsync())
+                return await stream.DecompressToStringAsync();
+        }
+
+        public void Dispose()
+        {
+            _client.Dispose();
+            PlayerSource = null;
+            Instructions = null;
+            sb.Clear();
+        }
     }
 }

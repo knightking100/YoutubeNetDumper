@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="System.Text.JsonLab" Version="0.1.0-preview2-180808-3" />
+    <PackageReference Include="System.Text.JsonLab" Version="0.1.0-preview2-180816-2" />
   </ItemGroup>
 
 </Project>

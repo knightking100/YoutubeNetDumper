@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace YoutubeNetDumper
 {
@@ -54,6 +57,15 @@ namespace YoutubeNetDumper
             sb[0] = input[index];
             sb[index] = input[0];
             return sb.ToString();
+        }
+
+        public static async Task<string> DecompressToStringAsync(this Stream gzipStream)
+        {
+            using (var stream = new GZipStream(gzipStream, CompressionMode.Decompress))
+            using (var reader = new StreamReader(stream))
+            {
+                return await reader.ReadToEndAsync();
+            }
         }
     }
 }
