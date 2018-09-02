@@ -305,7 +305,6 @@ namespace YoutubeNetDumper
 
         private async Task<ReadOnlyMemory<byte>> GetJsonAsync(string url, byte[] buffer)
         {
-            var memory = new Memory<byte>(buffer);
             int current_index = 0;
 
             bool found = false;
@@ -335,16 +334,26 @@ namespace YoutubeNetDumper
 
                     startJson = found && (startJson || value == '{');
 
+                    if (current_index >= buffer.Length) // Only happen in rare cases
+                    {
+                        byte[] currentbuffer = buffer;
+                        buffer = null; //Just to make sure
+                        byte[] newbuffer = _pool.Rent(buffer.Length + 20000);
+                        Buffer.BlockCopy(currentbuffer, 0, newbuffer, 0, current_index);
+                        _pool.Return(currentbuffer);
+                        buffer = newbuffer;
+                    }
+
                     if (startJson)
                     {
-                        memory.Span[current_index] = value;
+                        buffer[current_index] = value;
                         current_index++;
                     }
                 }
                 _pool.Return(chars);
             }
 
-            return memory.Slice(0, current_index);
+            return buffer.AsMemory(0, current_index);
         }
 
         private async Task<string> GetStringWithCompressionAsync(string url)

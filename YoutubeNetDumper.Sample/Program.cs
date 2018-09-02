@@ -15,6 +15,7 @@ namespace YoutubeNetDumper.Sample
         private static void Main(string[] args)
         {
             ExecuteAsync().GetAwaiter().GetResult();
+            Console.ReadLine();
         }
 
         static async Task ExecuteAsync()
@@ -34,7 +35,11 @@ namespace YoutubeNetDumper.Sample
             }
             videoId = YoutubeUtils.ParseVideoId(videoId);
             var result = await dumper.DumpAsync(videoId);
-            
+            if (!result.Successful)
+            {
+                Console.WriteLine($"Failed to dump video '{videoId}'");
+                return;
+            }
             Console.WriteLine($"\n{result.Video.MediaStreams.Count} streams were obtained");
 
             foreach (var stream in result.Video.MediaStreams)
@@ -86,8 +91,7 @@ namespace YoutubeNetDumper.Sample
                         break;
                 }
             }
-
-            Console.ReadLine();
+            
         }
 
         private static class RANDOM
