@@ -17,15 +17,16 @@ namespace YoutubeNetDumper
 {
     public sealed class YoutubeExperimentalDumper : IYoutubeDumper
     {
+        private const string ScriptHost = "https://s.ytimg.com";
         private readonly HttpClient _client;
         private readonly StringFormatter sb;
-
-        private string PlayerSource { get; set; }
-        private IReadOnlyList<UnscramblingInstruction> Instructions { get; set; }
         private readonly Stopwatch sw_parsing;
         private readonly Stopwatch sw;
         private readonly ArrayPool<byte> _pool;
         private readonly YoutubeExperimentalConfig _config;
+        
+        private string PlayerSource { get; set; }
+        private IReadOnlyList<UnscramblingInstruction> Instructions { get; set; }
 
         /// <summary>
         /// Create a new instance of <see cref="YoutubeDumper"/>
@@ -72,7 +73,7 @@ namespace YoutubeNetDumper
             _pool.Return(buffer);
             var video = config.Video;
 
-            var player_url = "https://s.ytimg.com" + config.PlayerUrl;
+            var player_url = ScriptHost + config.PlayerUrl;
 
             bool addComma = false;
             if (!string.IsNullOrEmpty(config.RawAdaptiveStreams))
@@ -194,16 +195,21 @@ namespace YoutubeNetDumper
 
         private string GetDecryptFunctionName(string playerSource)
         {
-            var searchTerm = "\"signature\",";
+            //var searchTerm = "\"signature\",";s
+            var searchTerm = "akamaized.net";
             var pos = playerSource.IndexOf(searchTerm);
 
             if (pos < 0) throw new Exception("Could not find the function for decoding");
 
             string result = "";
+            bool startFunctionName = false;
             for (int i = pos + searchTerm.Length; i < playerSource.Length; i++)
             {
-                if (playerSource[i] == '(') break;
-                result += playerSource[i];
+                var character = playerSource[i];
+                startFunctionName = startFunctionName || char.IsUpper(playerSource[i]);
+                if (character == '(' && startFunctionName) break;
+                if (startFunctionName)
+                    result += character;
             }
 
             return result.Trim();
@@ -253,9 +259,9 @@ namespace YoutubeNetDumper
         static string[] _props = { "js" , "adaptive_fmts" , "url_encoded_fmt_stream_map" ,
         "video_id", "title", "author", "thumbnail_url", "live_content", "length_seconds", "avg_rating",
         "keywords", "view_count"};
-        private static YoutubeConfig ParseConfig(ReadOnlyMemory<byte> json)
+        private static YoutubeConfig ParseConfig(ReadOnlySequence<byte> json)
         {
-            var reader = new Utf8JsonReader(json.Span);
+            var reader = new Utf8JsonReader(json);
             string playerUrl = null;
             string raw_adaptive_streams = null;
             string raw_mixed_streams = null;
@@ -303,7 +309,7 @@ namespace YoutubeNetDumper
         static readonly byte[] end_pattern = Encoding.UTF8.GetBytes("tplayer.load");
         static readonly byte[] start_pattern = Encoding.UTF8.GetBytes("tplayer.config");
 
-        private async Task<ReadOnlyMemory<byte>> GetJsonAsync(string url, byte[] buffer)
+        private async Task<ReadOnlySequence<byte>> GetJsonAsync(string url, byte[] buffer)
         {
             int current_index = 0;
 
@@ -338,7 +344,7 @@ namespace YoutubeNetDumper
                     {
                         byte[] currentbuffer = buffer;
                         buffer = null; //Just to make sure
-                        byte[] newbuffer = _pool.Rent(buffer.Length + 20000);
+                        byte[] newbuffer = _pool.Rent(currentbuffer.Length + 20000);
                         Buffer.BlockCopy(currentbuffer, 0, newbuffer, 0, current_index);
                         _pool.Return(currentbuffer);
                         buffer = newbuffer;
@@ -353,7 +359,7 @@ namespace YoutubeNetDumper
                 _pool.Return(chars);
             }
 
-            return buffer.AsMemory(0, current_index);
+            return new ReadOnlySequence<byte>(buffer, 0, current_index);
         }
 
         private async Task<string> GetStringWithCompressionAsync(string url)
